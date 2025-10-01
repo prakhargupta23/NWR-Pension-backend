@@ -76,7 +76,7 @@ const httpTrigger: AzureFunction = async function (
       },
     ];
 
-    // console.log(users);
+    console.log(users);
 
     const matchedUser = users.find(
       (user) => user.username === username && user.password === password && user.portal === portal
