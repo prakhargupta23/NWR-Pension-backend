@@ -44,7 +44,7 @@ export async function processUserQuery(
 
     // Fetch instructions from public JSON link
     const jsonUrl =
-      "https://reshapestorage.blob.core.windows.net/reshape-public/railway.json"; // Replace with actual URL
+      "https://promptstoragenwr.blob.core.windows.net/railways/prompt.json"; // Replace with actual URL
     const response = await axios.get(jsonUrl);
     let instructionsFromJson;
     if (pageName === "pensionDashboard") {
