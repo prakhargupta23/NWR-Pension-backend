@@ -12,7 +12,6 @@ A backend system built using Azure Functions (Node.js) and TypeScript.
 - Azure Functions (Node.js runtime)
 - TypeScript
 - Node.js
-- Axios
 
 ---
 
@@ -20,7 +19,6 @@ A backend system built using Azure Functions (Node.js) and TypeScript.
 
 - Azure OpenAI Service (GPT-4o)
 - OpenAI Assistants API
-- Mistral AI
 - tiktoken (tokenization library)
 
 ---
@@ -43,8 +41,6 @@ A backend system built using Azure Functions (Node.js) and TypeScript.
 - pdf-lib
 - pdfjs-dist
 - pdf-parse
-- mammoth
-- Sharp
 
 ---
 

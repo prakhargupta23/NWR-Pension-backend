@@ -13,8 +13,6 @@ import { FinanceNote } from '../Model/FinanceNote.model';
 import { RejectionNote } from '../Model/RejectionNote.model';
 
 import * as mammoth from 'mammoth';
-import { runPythonScript } from "./ocr"
-import { saveTextToFile } from "./saveintxt"
 import * as fs from 'fs';
 import axios from 'axios';
 import { ExpenditureReport } from "../Model/ExpenditureReport.model";
@@ -44,77 +42,55 @@ export interface ExpenditureRowDB {
 
 
 export async function getfiledata(prompt: string, file: string) {
+  try {
+    console.log("gpt reached", file[0]);
+
+    let extractedText = "";
     try {
-        console.log("gpt reached",file[0]);
+      const response = await axios.post('https://ocrappnwrsup-bwhhbsenaeb8gqdm.canadacentral-01.azurewebsites.net/ocr', {
+        pdfBase64: file
+      });
+      extractedText = response.data.text;
+      console.log("Extracted text:", response.data.text);
+      console.log("OCR URL IN CODE:",
+        "https://flaskocr-bwctd7d9d0gvgveu.canadacentral-01.azurewebsites.net/ocr"
+      );
+      console.log("ENV OCR URL:", process.env.OCR_SERVICE_URL);
 
-        // const wordconversion = await processPdfFromBase64(file);
-        // console.log("word conversion successful",wordconversion);
+    } catch (error) {
+      console.error("OCR Error:", error.response?.data || error.message);
+    }
 
-        // const base64topdf = await convertBase64ToPdf(file);
-        // console.log("pdf converted",base64topdf)
-        // const extractedText = await runPythonScript('file.py');
-        
+    console.log("python response", extractedText)
 
-        // const extractedText = await extractTextFromPDF(file);
-        // console.log("text extracted from parse file",extractedText);
+    // console.log("prompt:",prompt);
+    // const extractedText = "";
+    console.log("extracted text", extractedText);
 
-
-        // const extractedText =await mistralOcr(file,prompt);
-        // const extractedText = await processPDFFromBase64(file, prompt);
-
-
-        //save base64 in text file 
-        //ocrmypdf
-        // const savebase64 = await saveTextToFile(file);
-        // const textfrompdf = await runPythonScript('./src/service/file.py')
-        // const extractedText = await readFromTxtFile('./src/service/extracted.txt')
-      
-        let extractedText = "";
-        try {
-          const response = await axios.post('https://ocrappnwrsup-bwhhbsenaeb8gqdm.canadacentral-01.azurewebsites.net/ocr', {
-            pdfBase64: file
-          });
-          extractedText = response.data.text;
-          console.log("Extracted text:", response.data.text);
-          console.log("OCR URL IN CODE:", 
-            "https://flaskocr-bwctd7d9d0gvgveu.canadacentral-01.azurewebsites.net/ocr"
-          );
-          console.log("ENV OCR URL:", process.env.OCR_SERVICE_URL);
-
-        } catch (error) {
-          console.error("OCR Error:", error.response?.data || error.message);
-        }
-        
-        console.log("python response",extractedText)
-        
-        // console.log("prompt:",prompt);
-        // const extractedText = "";
-        console.log("extracted text",extractedText);
-        
-        const jsonPrompt = `${prompt} 
+    const jsonPrompt = `${prompt} 
 
               Return only valid JSON.
               The document given to you will be the extracted text using ocr and might not be properly structured but the keep the values same and process accordingly(consider ] as a distinction between columns if it is in a table row)
               Document:
               ${extractedText}`;
-        // console.log("json prompt",jsonPrompt)
-        return await getGpt4oResponse(jsonPrompt, {extractedText});
-    } catch (error) {
-        console.error("Error in getfiledata:", error);
-        throw error;
-    }
+    // console.log("json prompt",jsonPrompt)
+    return await getGpt4oResponse(jsonPrompt, { extractedText });
+  } catch (error) {
+    console.error("Error in getfiledata:", error);
+    throw error;
+  }
 }
 
 
 function readFromTxtFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-      fs.readFile(filePath, 'utf8', (err, data) => {
-          if (err) {
-              reject(`An error occurred while reading the file: ${err.message}`);
-              return;
-          }
-          resolve(data);
-      });
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        reject(`An error occurred while reading the file: ${err.message}`);
+        return;
+      }
+      resolve(data);
+    });
   });
 }
 
@@ -138,7 +114,7 @@ async function extractTextFromPDF(base64File: string): Promise<string> {
 
     // Convert to buffer
     const buffer = Buffer.from(base64File, 'base64');
-    
+
     // Empty buffer check
     if (buffer.length === 0) {
       throw new Error('Empty file content');
@@ -164,17 +140,17 @@ async function extractTextFromPDF(base64File: string): Promise<string> {
 // Helper functions to detect file types
 function isPDF(buffer: Buffer): boolean {
   // PDF magic number: %PDF
-  return buffer.length > 4 && 
-         buffer.toString('utf8', 0, 4) === '%PDF';
+  return buffer.length > 4 &&
+    buffer.toString('utf8', 0, 4) === '%PDF';
 }
 
 function isDOCX(buffer: Buffer): boolean {
   // DOCX magic number: PK\x03\x04 (ZIP format)
-  return buffer.length > 4 && 
-         buffer[0] === 0x50 && 
-         buffer[1] === 0x4B && 
-         buffer[2] === 0x03 && 
-         buffer[3] === 0x04;
+  return buffer.length > 4 &&
+    buffer[0] === 0x50 &&
+    buffer[1] === 0x4B &&
+    buffer[2] === 0x03 &&
+    buffer[3] === 0x04;
 }
 
 
@@ -189,7 +165,7 @@ export const expenditureService = {
   getExpenditureData: async () => {
     try {
       const [data] = await Promise.all([
-        expenditurebills.findAll({ 
+        expenditurebills.findAll({
           raw: true,
           order: [['createdAt', 'DESC']]
         }),
@@ -227,23 +203,23 @@ export const expenditureService = {
     try {
       let newSNo = rowData.SNo;
       const data = await Promise.all([
-        expenditurebills.findAll({ 
+        expenditurebills.findAll({
           raw: true,
           where: {
             SNo: newSNo  // Filter by specific SNo value 
           },
         }),
       ]);
-      
-      const row=data[0][0] === undefined ? rowData : data[0][0];
+
+      const row = data[0][0] === undefined ? rowData : data[0][0];
       console.log("hello");
       console.log("the row data  0", data);
       console.log("the row data 1", data[0]);
       console.log("the row data 2", rowData.Status);
-      
+
       const dbRowData = {
         SNo: newSNo,
-        Status: rowData.Status? rowData.Status : row["Status"] || 'pending',
+        Status: rowData.Status ? rowData.Status : row["Status"] || 'pending',
         // Committee: row["Committee"] ? rowData.Committee : row["Committee"],
         ReceiptNote: row["ReceiptNote"] === "success" ? row["ReceiptNote"] : rowData.ReceiptNote,
         TaxInvoice: row["TaxInvoice"] === "success" ? row["TaxInvoice"] : rowData.TaxInvoice,
@@ -254,7 +230,7 @@ export const expenditureService = {
         VerificationTime: row["VerificationTime"] === null ? rowData.VerificationTime : row["VerificationTime"],
         Remark: rowData.Remark !== null ? rowData.Remark : row["Remark"],
         AuthorizationCommittee: (row["AuthorizationCommittee"] === "-" || row["AuthorizationCommittee"] === null) ? rowData.AuthorizationCommittee : row["AuthorizationCommittee"],
-        NoteGeneration: row["NoteGeneration"] === null ? (rowData.NoteGeneration? rowData.NoteGeneration : row["NoteGeneration"]) : row["NoteGeneration"],
+        NoteGeneration: row["NoteGeneration"] === null ? (rowData.NoteGeneration ? rowData.NoteGeneration : row["NoteGeneration"]) : row["NoteGeneration"],
         //upload times
         ReceiptNoteUploadTime: row["ReceiptNoteUploadTime"] === null ? rowData.ReceiptNoteUploadTime : row["ReceiptNoteUploadTime"],
         TaxInvoiceUploadTime: row["TaxInvoiceUploadTime"] === null ? rowData.TaxInvoiceUploadTime : row["TaxInvoiceUploadTime"],
@@ -264,12 +240,12 @@ export const expenditureService = {
         InspectionCertificateUploadTime: row["InspectionCertificateUploadTime"] === null ? rowData.InspectionCertificateUploadTime : row["InspectionCertificateUploadTime"],
 
       };
-  
+
       console.log("Attempting update for SNo:", rowData.SNo);
       console.log("Data to update:", dbRowData);
-  
+
       let result;
-  
+
       if (dbRowData.SNo) {
         // Update existing record
         let updatedCount: number = 0;
@@ -283,7 +259,7 @@ export const expenditureService = {
             where: { SNo: dbRowData.SNo },
             transaction,
           });
-  
+
           updatedCount = count;
           console.log("Updated rows count:", updatedCount);
 
@@ -303,13 +279,13 @@ export const expenditureService = {
             message: "Failed to update record: " + error.message,
           };
         }
-  
+
         if (updatedCount === 0) {
           // No record found, create new
           try {
             console.log("starting row creation");
             const created = await expenditurebills.create(dbRowData, { transaction });
-            console.log("row creation completed",created);
+            console.log("row creation completed", created);
             result = { success: true, message: "New record created" };
           } catch (error) {
             console.error("Error creating new record:", error);
@@ -326,7 +302,7 @@ export const expenditureService = {
         console.log("no SNo provided");
         return;
       }
-  
+
       await transaction.commit();
       console.log("Transaction committed successfully");
       return result;
@@ -343,11 +319,11 @@ export const expenditureService = {
   getGstInvoiceData: async () => {
     try {
       console.log("starting gst data fetching")
-      const data = await ExpenditureReport.findAll({ 
+      const data = await ExpenditureReport.findAll({
         raw: true,
         order: [["Created", "DESC"]]
       });
-      
+
       console.log("Dashboard data fetched successfully");
       return data;
     } catch (error) {
@@ -359,10 +335,10 @@ export const expenditureService = {
   putNoteData: async (documentType: string, row: any) => {
     try {
       if (documentType === 'FinanceNote') {
-        const { SNo, co6No, ld, sd, otherDeductions, netPayment} = row;
-        console.log("these",SNo, co6No, ld, sd, otherDeductions, netPayment)
+        const { SNo, co6No, ld, sd, otherDeductions, netPayment } = row;
+        console.log("these", SNo, co6No, ld, sd, otherDeductions, netPayment)
 
-        
+
         await FinanceNote.create({
           SNo: SNo || null,
           CO6No: co6No || null,
@@ -377,8 +353,8 @@ export const expenditureService = {
         console.log("return note generation")
 
         const { SNo, MA, GSTR2A, CopyTaxIC, Refund, InvoiceCO6 } = row;
-        console.log("jhj",SNo, MA, GSTR2A, CopyTaxIC, Refund, InvoiceCO6)
-        
+        console.log("jhj", SNo, MA, GSTR2A, CopyTaxIC, Refund, InvoiceCO6)
+
         await RejectionNote.create({
           SNo,
           MA,
@@ -406,14 +382,14 @@ export const expenditureService = {
           const data = await FinanceNote.findOne({ where: { SNo: SNo }, raw: true });
           return { success: true, data };
         } else {
-          return { success: false,};
+          return { success: false, };
         }
       } else if (documentType === 'RejectionNote') {
         if (SNo) {
           const data = await RejectionNote.findOne({ where: { SNo: SNo }, raw: true });
           return { success: true, data };
         } else {
-          return { success: false,};
+          return { success: false, };
         }
       } else {
         return { success: false, message: 'Invalid document type' };
@@ -423,7 +399,7 @@ export const expenditureService = {
       return { success: false, message: error.message };
     }
   },
-  
+
 };
 
 
@@ -434,7 +410,7 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
   console.log("Starting putfiledatatodb function...");
   console.log("Document Type:", documentType);
   console.log("Row ID:", rowId);
-  
+
   const transaction = await sequelize.transaction();
 
   if (documentType === "ReceiptNote") {
@@ -463,14 +439,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       QtyAccepted: data["Qty. Accepted"],
       QtyRejected: data["Qty. Rejected"]
     };
-    console.log("receipt note row",row)
+    console.log("receipt note row", row)
     try {
       await ReceiptNote.sync({ alter: true });
-      
+
       await ReceiptNote.create(row, { transaction });
-      
+
       await transaction.commit();
-      
+
       return { success: true, message: "Receipt note data saved successfully" };
     } catch (error) {
       console.error("Error in ReceiptNote creation:", error);
@@ -503,14 +479,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       BillOfLanding: data["Bill of Landing/LR-RR No."],
       HsnCode: data["HSN Code"]
     };
-    console.log("tax invoice row",row)
+    console.log("tax invoice row", row)
     try {
       await TaxInvoice.sync({ alter: true });
-      
+
       const answer = await TaxInvoice.create(row, { transaction });
-      
+
       await transaction.commit();
-      
+
       return { success: true, message: "Tax invoice data saved successfully" };
     } catch (error) {
       console.error("Error in TaxInvoice creation:", error);
@@ -546,15 +522,15 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       InspectionAgency: data["Inspection Agency"],
       VenderCode: data["Vendor Code"],
     };
-    console.log("gst invoice row",row)
+    console.log("gst invoice row", row)
     try {
       await GstInvoice.sync({ alter: true });
-      
+
       await GstInvoice.create(row, { transaction });
-      
+
       await transaction.commit();
-      
-      return { success: true, message: "GST invoice data saved successfully1",data: row.IREPSBillRegNo };
+
+      return { success: true, message: "GST invoice data saved successfully1", data: row.IREPSBillRegNo };
     } catch (error) {
       console.error("Error in GSTInvoice creation:", error);
       console.error("Error details:", {
@@ -565,7 +541,7 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       await transaction.rollback();
       throw error;
     }
-    
+
   } else if (documentType === "ModificationAdvice") {
     // const modificationData = data["Modification Advice Verification"];
     const row = {
@@ -577,14 +553,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       PLNo: data["PL no"],
       VCode: data["Vcode"],
     };
-    console.log("modification advice row",row)
+    console.log("modification advice row", row)
     try {
       await ModificationInvoice.sync({ alter: true });
-      
+
       await ModificationInvoice.create(row, { transaction });
-      
+
       await transaction.commit();
-      
+
       return { success: true, message: "Modification advice data saved successfully" };
     } catch (error) {
       console.error("Error in ModificationInvoice creation:", error);
@@ -608,14 +584,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       FreightCharges: data["Freight Charges"],
       SecurityMoney: data["Security Money"]
     };
-    console.log("purchase order row",row)
+    console.log("purchase order row", row)
     try {
       await PurchaseOrder.sync({ alter: true });
-      
+
       await PurchaseOrder.create(row, { transaction });
-      
+
       await transaction.commit();
-      
+
       return { success: true, message: "Purchase order data saved successfully" };
     } catch (error) {
       console.error("Error in PurchaseOrder creation:", error);
@@ -624,9 +600,9 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
         message: error.message,
         stack: error.stack
       });
-     
+
       await transaction.rollback();
-      
+
       throw error;
     }
   } else if (documentType === "InspectionCertificate") {
@@ -644,14 +620,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       QtyPassed: data["Qty Passed"],
       QtyRejected: data["Qty Rejected"]
     };
-    console.log("inspection certificate row",row)
+    console.log("inspection certificate row", row)
     try {
       await InspectionCertificate.sync({ alter: true });
-      
+
       await InspectionCertificate.create(row, { transaction });
-      
+
       await transaction.commit();
-      
+
       return { success: true, message: "Inspection certificate data saved successfully" };
     } catch (error) {
       console.error("Error in InspectionCertificate creation:", error);
@@ -667,7 +643,7 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
     }
   }
   console.log("Invalid document type:", documentType);
-  return { success: false, message: "Invalid document type"};
+  return { success: false, message: "Invalid document type" };
 }
 
 
@@ -688,31 +664,31 @@ export async function verifyData(rowData: ExpenditureRowDB): Promise<{ Results: 
     //   raw: true, 
     //   where: { SNo: rowData.SNo }
     // });
-    const recieptnotedata = await ReceiptNote.findAll({ 
-      raw: true, 
+    const recieptnotedata = await ReceiptNote.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    const taxinvoicedata = await TaxInvoice.findAll({ 
-      raw: true, 
+    const taxinvoicedata = await TaxInvoice.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    const gstinvoicedata = await GstInvoice.findAll({ 
-      raw: true, 
+    const gstinvoicedata = await GstInvoice.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    const modificationadvicedata = await ModificationInvoice.findAll({ 
-      raw: true, 
+    const modificationadvicedata = await ModificationInvoice.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    const purchaseorderdata = await PurchaseOrder.findAll({ 
-      raw: true, 
+    const purchaseorderdata = await PurchaseOrder.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    const inspectioncertificatedata = await InspectionCertificate.findAll({ 
-      raw: true, 
+    const inspectioncertificatedata = await InspectionCertificate.findAll({
+      raw: true,
       where: { SNo: rowData.SNo }
     });
-    
+
 
     console.log("All data fetched successfully. Starting verification...");
     try {
@@ -833,7 +809,7 @@ All matching and transformations are critical and must be properly followed duri
 
 
       console.log("Sending data to GPT for verification...");
-      const testanswer = await getGpt4oResponse(jsonPrompt, {verificationData});
+      const testanswer = await getGpt4oResponse(jsonPrompt, { verificationData });
       console.log("Verification result received:", testanswer);
 
       if (testanswer) {
@@ -858,7 +834,7 @@ All matching and transformations are critical and must be properly followed duri
           'Matched Results',
           testanswer.MatchedResults.map((result: string) => `• ${result}`).join('\n'),
         ].join('\n')
-        console.log("formatted remark",formattedRemark)
+        console.log("formatted remark", formattedRemark)
       } else if (testanswer.Reason) {
         formattedRemark = testanswer.Reason;
       }
