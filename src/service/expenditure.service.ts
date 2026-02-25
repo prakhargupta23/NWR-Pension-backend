@@ -16,6 +16,7 @@ import * as mammoth from 'mammoth';
 import * as fs from 'fs';
 import axios from 'axios';
 import { ExpenditureReport } from "../Model/ExpenditureReport.model";
+import { json } from "sequelize";
 
 export interface ExpenditureRowDB {
   SNo: number;
@@ -51,21 +52,21 @@ export async function getfiledata(prompt: string, file: string) {
         pdfBase64: file
       });
       extractedText = response.data.text;
-      console.log("Extracted text:", response.data.text);
-      console.log("OCR URL IN CODE:",
-        "https://flaskocr-bwctd7d9d0gvgveu.canadacentral-01.azurewebsites.net/ocr"
-      );
-      console.log("ENV OCR URL:", process.env.OCR_SERVICE_URL);
+      // console.log("Extracted text:", response.data.text);
+      // console.log("OCR URL IN CODE:",
+      //   "https://flaskocr-bwctd7d9d0gvgveu.canadacentral-01.azurewebsites.net/ocr"
+      // );
+      // console.log("ENV OCR URL:", process.env.OCR_SERVICE_URL);
 
     } catch (error) {
       console.error("OCR Error:", error.response?.data || error.message);
     }
 
-    console.log("python response", extractedText)
+    // console.log("python response", extractedText)
 
     // console.log("prompt:",prompt);
     // const extractedText = "";
-    console.log("extracted text", extractedText);
+    // console.log("extracted text", extractedText);
 
     const jsonPrompt = `${prompt} 
 
@@ -335,19 +336,84 @@ export const expenditureService = {
   putNoteData: async (documentType: string, row: any) => {
     try {
       if (documentType === 'FinanceNote') {
+        console.log("Finance Note data insertion", row)
         const { SNo, co6No, ld, sd, otherDeductions, netPayment } = row;
         console.log("these", SNo, co6No, ld, sd, otherDeductions, netPayment)
+
+        const recieptdata: any = await ReceiptNote.findOne({
+          where: { SNo: SNo },
+          raw: true,
+        });
+        console.log("recieptdata in finance note generation", recieptdata)
+
+
+        const purchaseorderdata: any = await PurchaseOrder.findOne({
+          where: { SNo: SNo },
+          raw: true,
+        });
+        console.log("purchaseorderdata in finance note generation", purchaseorderdata)
+
+        const recieptnotePoSr = recieptdata.POSrNo;
+        console.log("recieptnotePoSr in finance note generation", recieptnotePoSr)
+
+        const poSrArray = purchaseorderdata.POSr;
+
+        console.log("purchaseorderdate in finance note generation", poSrArray)
+        console.log("type of data of purchaseorderdate in finance note generation", typeof poSrArray)
+        const jsonposr = JSON.parse(poSrArray);
+        console.log("jsonposr in finance note generation", jsonposr)
+
+        // POSr is a JSON array of table rows; parse it if it's a string
+        // const poSrArray = typeof purchaseorderdate === 'string'
+        //   ? JSON.parse(purchaseorderdate)
+        //   : purchaseorderdate;
+
+        // Find the matching row in the POSr array by comparing Sr/P.O.Sr with the receipt note's POSrNo
+        // const matchingPoSrEntry = Array.isArray(poSrArray)
+        //   ? poSrArray.find((entry: any) => {
+        //     const srValue = entry["PO Sr. No."];
+        //     return srValue && String(srValue).trim() === String(recieptnotePoSr).trim();
+        //   })
+        //   : null;
+
+        // console.log("matchingPoSrEntry in finance note generation", matchingPoSrEntry)
+
+        const matchingEntry = Array.isArray(jsonposr)
+          ? jsonposr.find((entry: any) =>
+            String(entry?.["PO Sr. No."] ?? "").trim() ===
+            String(recieptnotePoSr ?? "").trim()
+          )
+          : null;
+
+        const completiondate = matchingEntry?.["Complete"] || null;
+
+        console.log("completiondate:", completiondate);
+        const dateofacceptance = recieptdata.DateofAcceptance;
+        console.log("completiondate in finance note generation", completiondate)
+        console.log("dateofacceptance in finance note generation", dateofacceptance)
+
+
+        const daysdiff = getDaysDifference(completiondate, dateofacceptance);
+        console.log("daysdiff in finance note generation", daysdiff)
+
+        const Ld = (daysdiff / 7) * 0.5 * recieptdata.Value;
+        console.log("Ld in finance note generation", Ld)
+
+
+
+
 
 
         await FinanceNote.create({
           SNo: SNo || null,
           CO6No: co6No || null,
-          Ld: ld || null,
+          Ld: String(Ld) || null,
           Sd: sd || null,
           Otherdedunctions: otherDeductions || null,
           NetPayment: netPayment || null,
           Created: null,
         });
+        console.log("Finance note created successfully")
         return { success: true, message: 'FinanceNote inserted successfully' };
       } else if (documentType === 'RejectionNote') {
         console.log("return note generation")
@@ -362,7 +428,7 @@ export const expenditureService = {
           CopyTaxIC,
           Refund,
           InvoiceCO6,
-          Created: null,
+          Created: new Date(),
         });
         return { success: true, message: 'RejectionNote inserted successfully' };
       } else {
@@ -437,13 +503,14 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       QtyInvoiced: data["Qty. Invoiced"],
       QtyReceived: data["Qty. Received"],
       QtyAccepted: data["Qty. Accepted"],
-      QtyRejected: data["Qty. Rejected"]
+      QtyRejected: data["Qty. Rejected"],
+      DateofAcceptance: data["Date of Acceptance"],
     };
     console.log("receipt note row", row)
     try {
       await ReceiptNote.sync({ alter: true });
 
-      await ReceiptNote.create(row, { transaction });
+      await ReceiptNote.create(row as any, { transaction });
 
       await transaction.commit();
 
@@ -578,7 +645,7 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       PONumber: data["PO No."],
       InspectionAgency: data["Inspection Agency"],
       BasicRate: data["Basic Rate"],
-      POSr: data["PO Sr."],
+      POSr: data["TableRows"],
       PLNo: data["PL No"],
       OrderedQuantity: data["Ordered Quantity"],
       FreightCharges: data["Freight Charges"],
@@ -953,9 +1020,39 @@ export async function updateExpenditureReportData(row: any) {
 
 
 
+function getDaysDifference(
+  completionDateStr: string,
+  acceptanceDateStr: string
+): number | null {
+  if (!completionDateStr || !acceptanceDateStr) {
+    return null;
+  }
 
+  const parseDate = (dateStr: string): Date | null => {
+    const parts = dateStr.split("/");
+    if (parts.length !== 3) return null;
 
+    const [day, month, year] = parts;
 
+    // Handle 2-digit or 4-digit year
+    const fullYear = year.length === 2 ? Number("20" + year) : Number(year);
 
+    return new Date(fullYear, Number(month) - 1, Number(day));
+  };
 
+  const completionDate = parseDate(completionDateStr);
+  const acceptanceDate = parseDate(acceptanceDateStr);
 
+  if (!completionDate || !acceptanceDate) {
+    return null;
+  }
+
+  const timeDifference =
+    acceptanceDate.getTime() - completionDate.getTime();
+
+  const daysDifference = Math.ceil(
+    timeDifference / (1000 * 60 * 60 * 24)
+  );
+
+  return daysDifference;
+}

@@ -59,6 +59,10 @@ export const ReceiptNote = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    DateofAcceptance: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     POSrNo: {
       type: DataTypes.TEXT,
       allowNull: true,

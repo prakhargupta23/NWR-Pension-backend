@@ -24,7 +24,7 @@ export const PurchaseOrder = sequelize.define(
       allowNull: true,
     },
     POSr: {
-      type: DataTypes.TEXT,
+      type: DataTypes.JSON,
       allowNull: true,
     },
     PLNo: {

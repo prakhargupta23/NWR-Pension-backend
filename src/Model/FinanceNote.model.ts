@@ -35,7 +35,7 @@ export const FinanceNote = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true
     }
-      
+
   },
   {
     freezeTableName: true,
