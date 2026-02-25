@@ -36,11 +36,11 @@ const httpTrigger: AzureFunction = async function (
     
     //create a log for the data upload
     const { tableName, data, month, username } = req.body;
-    if (!tableName || !Array.isArray(data) || data.length === 0) {
-      dataUploadlog(username, month, "Failure");
-    } else {
-      dataUploadlog(username, month, "Success");
-    }
+    // if (!tableName || !Array.isArray(data) || data.length === 0) {
+    //   dataUploadlog(username, month, "Failure");
+    // } else {
+    //   dataUploadlog(username, month, "Success");
+    // }
     
 
     // Validate request body
