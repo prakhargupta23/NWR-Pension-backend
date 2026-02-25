@@ -13,8 +13,6 @@ import { FinanceNote } from '../Model/FinanceNote.model';
 import { RejectionNote } from '../Model/RejectionNote.model';
 
 import * as mammoth from 'mammoth';
-import { runPythonScript } from "./ocr"
-import { saveTextToFile } from "./saveintxt"
 import * as fs from 'fs';
 import axios from 'axios';
 import { ExpenditureReport } from "../Model/ExpenditureReport.model";
