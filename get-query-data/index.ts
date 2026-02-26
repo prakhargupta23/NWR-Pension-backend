@@ -22,15 +22,15 @@ const httpTrigger: AzureFunction = async function (
 
     let decoded = {};
 
-    try {
-      decoded = jwt.verify(token, process.env.secret);
-    } catch (error) {
-      context.res = {
-        status: 401,
-        body: { error: "Invalid or expired token" },
-      };
-      return;
-    }
+    // try {
+    //   decoded = jwt.verify(token, process.env.secret);
+    // } catch (error) {
+    //   context.res = {
+    //     status: 401,
+    //     body: { error: "Invalid or expired token" },
+    //   };
+    //   return;
+    // }
     // Call the insertData function
     const result = await getQueryData(req.body.query);
     // Return success response
