@@ -15,11 +15,29 @@ const httpTrigger: AzureFunction = async function (
   req: HttpRequest
 ): Promise<void> {
   try {
-    
+
     const { username, password, portal } = req.body;
 
     // Store all credentials in an array
     const users = [
+      {
+        username: 'PFA',
+        password: 'PFA',
+        portal: 'PFA',
+        role: "mainAdmin",
+      },
+      {
+        username: 'PFA',
+        password: 'PFA',
+        portal: 'Pension',
+        role: "mainAdmin",
+      },
+      {
+        username: 'PFA',
+        password: 'PFA',
+        portal: 'expenditure',
+        role: "mainAdmin",
+      },
       {
         username: process.env.USERDETAIL,
         password: process.env.PASSWORD,
@@ -74,24 +92,7 @@ const httpTrigger: AzureFunction = async function (
         portal: 'PFA',
         role: "workshop",
       },
-      {
-        username: 'PFA',
-        password: 'PFA',
-        portal: 'PFA',
-        role: "mainAdmin",
-      },
-      {
-        username: 'PFA',
-        password: 'PFA',
-        portal: 'Pension',
-        role: "mainAdmin",
-      },
-      {
-        username: 'PFA',
-        password: 'PFA',
-        portal: 'expenditure',
-        role: "mainAdmin",
-      },
+
     ];
 
     console.log(users);
@@ -100,12 +101,12 @@ const httpTrigger: AzureFunction = async function (
       (user) => user.username === username && user.password === password && user.portal === portal
     );
     console.log("Matched User:", matchedUser);
-    if(portal === 'Pension'){
-      loginlog(username, matchedUser? "Success" : "Failure");
-    } else if(portal === 'expenditure'){
-      pfaloginlog(username, matchedUser? "Success" : "Failure");
+    if (portal === 'Pension') {
+      loginlog(username, matchedUser ? "Success" : "Failure");
+    } else if (portal === 'expenditure') {
+      pfaloginlog(username, matchedUser ? "Success" : "Failure");
     }
-    
+
     console.log("Matched User:2", matchedUser);
 
     if (matchedUser) {
