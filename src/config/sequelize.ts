@@ -10,15 +10,15 @@ const sequelizeInstance = new Sequelize({
     options: {
       encrypt: true, // Required for Azure SQL
       trustServerCertificate: true, // True for local dev/self-signed certs
-      requestTimeout: 30000, // 30 seconds
-      connectTimeout: 30000, // 30 seconds
+      requestTimeout: 100000, // 30 seconds
+      connectTimeout: 100000, // 30 seconds
     },
   },
   pool: {
     max: 5, // Increase pool size if necessary based on your app's load
     min: 0,
-    acquire: 60000, // 30 seconds to try getting a connection before throwing error
-    idle: 30000, // Connections will be closed after 10 seconds of being idle
+    acquire: 100000, // 30 seconds to try getting a connection before throwing error
+    idle: 100000, // Connections will be closed after 10 seconds of being idle
   },
   retry: {
     match: [
