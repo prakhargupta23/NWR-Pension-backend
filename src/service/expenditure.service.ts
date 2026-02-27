@@ -48,7 +48,10 @@ export async function getfiledata(prompt: string, file: string) {
 
     let extractedText = "";
     try {
-      const response = await axios.post('https://ocrappnwrsup-bwhhbsenaeb8gqdm.canadacentral-01.azurewebsites.net/ocr', {
+      // const response = await axios.post('https://ocrappnwrsup-bwhhbsenaeb8gqdm.canadacentral-01.azurewebsites.net/ocr', {
+      //   pdfBase64: file
+      // });
+      const response = await axios.post('https://fidelia-hypoplastic-madden.ngrok-free.dev/ocr', {
         pdfBase64: file
       });
       extractedText = response.data.text;
