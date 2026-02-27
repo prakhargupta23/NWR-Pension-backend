@@ -57,10 +57,10 @@ export async function getTableDetails(query: any) {
         const [monthStr, yearStr] = currentMonth.split("/");
         const mm = parseInt(monthStr, 10);
         const yyyy = parseInt(yearStr, 10);
-        
+
         let prevMonth: number;
         let prevYear: number;
-        
+
         if (mm === 1) {
           prevMonth = 12;
           prevYear = yyyy - 1;
@@ -68,10 +68,10 @@ export async function getTableDetails(query: any) {
           prevMonth = mm - 1;
           prevYear = yyyy;
         }
-        
+
         // Format previous month to MM/yyyy
         const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-        
+
         // Return the promise from executing the query with the current and previous month
         return sequelize.query(
           `SELECT 
@@ -146,10 +146,10 @@ export async function getTableDetails(query: any) {
         const [monthStr, yearStr] = currentMonth.split("/");
         const mm = parseInt(monthStr, 10);
         const yyyy = parseInt(yearStr, 10);
-        
+
         let prevMonth: number;
         let prevYear: number;
-        
+
         if (mm === 1) {
           prevMonth = 12;
           prevYear = yyyy - 1;
@@ -157,10 +157,10 @@ export async function getTableDetails(query: any) {
           prevMonth = mm - 1;
           prevYear = yyyy;
         }
-        
+
         // Format previous month to MM/yyyy
         const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-        
+
         // Return the promise from executing the query with the current and previous month
         return sequelize.query(
           `SELECT 
@@ -234,10 +234,10 @@ export async function getTableDetails(query: any) {
         const [monthStr, yearStr] = currentMonth.split("/");
         const mm = parseInt(monthStr, 10);
         const yyyy = parseInt(yearStr, 10);
-        
+
         let prevMonth: number;
         let prevYear: number;
-        
+
         if (mm === 1) {
           prevMonth = 12;
           prevYear = yyyy - 1;
@@ -245,10 +245,10 @@ export async function getTableDetails(query: any) {
           prevMonth = mm - 1;
           prevYear = yyyy;
         }
-        
+
         // Format previous month to MM/yyyy
         const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-        
+
         // Return the promise from executing the query with the current and previous month
         return sequelize.query(
           `SELECT 
@@ -306,7 +306,7 @@ export async function getTableDetails(query: any) {
     const results = await sequelize.query(query, {
       type: QueryTypes.SELECT,
     });
-    
+
 
     // Ensure results is always an array
     const formattedResults = Array.isArray(results) ? results : [results];
@@ -366,7 +366,9 @@ const convertBatchDataTypes = (batch, model, month) => {
 };
 
 export default async function insertData(tableName, dataArray, month) {
+  console.log("data insertion function reached")
   try {
+    console.log("check data")
     if (!Array.isArray(dataArray) || dataArray.length === 0) {
       throw new Error("❌ Data should be a non-empty array.");
     }
@@ -374,17 +376,17 @@ export default async function insertData(tableName, dataArray, month) {
     if (!month) {
       throw new Error("❌ Month is required to insert data.");
     }
-
+    console.log("finding model")
     // Find the correct model based on tableName
     const Model = models[tableName];
 
     if (!Model) {
       throw new Error(`❌ No model found for table: ${tableName}`);
     }
-
+    console.log("ensuring table")
     // Ensure table exists before inserting
     await ensureTableExists(Model, tableName);
-
+    console.log("ensured table")
     try {
       // **Delete only entries that match the given month**
       await Model.destroy({
@@ -394,7 +396,7 @@ export default async function insertData(tableName, dataArray, month) {
       console.log("❌ Error while deleting existing data for month:", month);
       console.error(e);
     }
-
+    console.log("deleting existing data")
     // Batch insert mechanism (400 entries at a time)
     const batchSize = 400;
     let batchStart = 0;
@@ -413,7 +415,7 @@ export default async function insertData(tableName, dataArray, month) {
       batchStart = batchEnd;
       batchEnd = batchStart + batchSize;
     }
-
+    console.log("inserting data")
     return {
       message: `✅ All data inserted into ${tableName} for month: ${month}.`,
       success: true,
@@ -472,6 +474,7 @@ export async function insertTrendData(tableName, dataArray, month) {
       // Optional: Add a small delay to avoid hitting rate limits or overwhelming the DB
       // await new Promise((resolve) => setTimeout(resolve, 100));
     }
+    console.log("data inserted successfully")
 
     return `✅ All data inserted into ${tableName}.`;
   } catch (error) {
@@ -492,7 +495,7 @@ export async function getQueryData(query: any) {
     const results = await sequelize.query(query, {
       type: QueryTypes.SELECT,
     });
-    
+
 
     // Ensure results is always an array
     const formattedResults = Array.isArray(results) ? results : [results];
@@ -597,8 +600,7 @@ export async function insertSbiCsvData(dataArray) {
             );
           } catch (error) {
             throw new Error(
-              `❌ Error converting entry at batch index ${
-                batchStart + index
+              `❌ Error converting entry at batch index ${batchStart + index
               }: ${JSON.stringify(entry)}`
             );
           }
