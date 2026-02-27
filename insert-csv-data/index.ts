@@ -13,7 +13,7 @@ const httpTrigger: AzureFunction = async function (
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Splits "Bearer TOKEN"
-
+    console.log("insert csv data function called");
     if (!token) {
       context.res = {
         status: 401,
@@ -23,7 +23,7 @@ const httpTrigger: AzureFunction = async function (
     }
 
     let decoded = {};
-
+    console.log("alive")
     try {
       decoded = jwt.verify(token, process.env.secret);
     } catch (error) {
@@ -33,7 +33,7 @@ const httpTrigger: AzureFunction = async function (
       };
       return;
     }
-    
+    console.log("still alive")
     //create a log for the data upload
     const { tableName, data, month, username } = req.body;
     // if (!tableName || !Array.isArray(data) || data.length === 0) {
@@ -41,7 +41,7 @@ const httpTrigger: AzureFunction = async function (
     // } else {
     //   dataUploadlog(username, month, "Success");
     // }
-    
+
 
     // Validate request body
     if (!tableName || !Array.isArray(data) || data.length === 0) {
@@ -55,10 +55,10 @@ const httpTrigger: AzureFunction = async function (
       };
       return;
     }
-
+    console.log("inserting data")
     // Call the insertData function
     const result = await insertData(tableName.toLowerCase(), data, month);
-
+    console.log("data insertion response", result)
     // Return success response
     context.res = {
       status: 200,
@@ -67,7 +67,6 @@ const httpTrigger: AzureFunction = async function (
   } catch (error) {
     // Handle errors and return response
     context.res = {
-      status: 200,
       body: { success: false, message: `Error: ${error.message}` },
     };
   }

@@ -381,14 +381,33 @@ export const expenditureService = {
 
         // console.log("matchingPoSrEntry in finance note generation", matchingPoSrEntry)
 
-        const matchingEntry = Array.isArray(jsonposr)
-          ? jsonposr.find((entry: any) =>
-            String(entry?.["PO Sr. No."] ?? "").trim() ===
-            String(recieptnotePoSr ?? "").trim()
-          )
-          : null;
+        let completiondate = ""
+        if (Array.isArray(jsonposr)) {
+          console.log("array")
+          const matchingEntry = Array.isArray(jsonposr)
+            ? jsonposr.find((entry: any) =>
+              String(entry?.["PO Sr. No."] ?? "").trim() ===
+              String(recieptnotePoSr ?? "").trim()
+            )
+            : null;
+          console.log("row for completion date", matchingEntry)
+          completiondate = matchingEntry?.["Complete"] || null;
+        } else {
+          console.log("json")
+          completiondate = jsonposr["Complete"];
+        }
 
-        const completiondate = matchingEntry?.["Complete"] || null;
+        // const matchingEntry = Array.isArray(jsonposr)
+        //   ? jsonposr.find((entry: any) =>
+        //     String(entry?.["PO Sr. No."] ?? "").trim() ===
+        //     String(recieptnotePoSr ?? "").trim()
+        //   )
+        //   : null;
+        // console.log("row for completion date", matchingEntry)
+        // const completiondate = matchingEntry?.["Complete"] || null;
+
+        //const completiondate = jsonposr["Complete"];
+
 
         console.log("completiondate:", completiondate);
         const dateofacceptance = recieptdata.DateofAcceptance;
@@ -397,9 +416,12 @@ export const expenditureService = {
 
 
         const daysdiff = getDaysDifference(completiondate, dateofacceptance);
-        console.log("daysdiff in finance note generation", daysdiff)
+        console.log("daysdiff in finance note generation", daysdiff, typeof (daysdiff))
+        const value = Number(recieptdata.Value);
+        console.log("type of", recieptdata.Value, typeof (value))
+        const power = (daysdiff / 7);
 
-        const Ld = (daysdiff / 7) * 0.5 * recieptdata.Value;
+        const Ld = power * 0.5 * value;
         console.log("Ld in finance note generation", Ld)
 
 
