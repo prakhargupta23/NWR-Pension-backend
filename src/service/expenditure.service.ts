@@ -52,7 +52,7 @@ export async function getfiledata(prompt: string, file: string) {
       //   pdfBase64: file
       // });
       const response = await axios.post('https://pdfocrazure.azurewebsites.net/ocr', {
-        pdfBase64: file
+        pdf: file
       });
       extractedText = response.data.text;
       // console.log("Extracted text:", response.data.text);
