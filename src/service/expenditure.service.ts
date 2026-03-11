@@ -421,7 +421,8 @@ export const expenditureService = {
         console.log("type of", recieptdata.Value, typeof (value))
         const power = (daysdiff / 7);
 
-        const Ld = power * 0.5 * value;
+        const multiplier = Math.min(0.5 * power, 10);
+        const Ld = multiplier * value;
         console.log("Ld in finance note generation", Ld)
 
 
