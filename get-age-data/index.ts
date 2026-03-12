@@ -12,8 +12,11 @@ const httpTrigger: AzureFunction = async function (
   req: HttpRequest
 ): Promise<void> {
   try {
+    const { month, year } = req.query;
+    const formattedMonth = month && year ? `${month.padStart(2, "0")}/${year}` : req.query.month;
+    
     // Call the insertData function
-    const result = await getAgeData(req.query.month);
+    const result = await getAgeData(formattedMonth);
     // Return success response
     context.res = {
       status: 200,

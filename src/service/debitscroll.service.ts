@@ -70,26 +70,46 @@ export function getAllValidMonths(months) {
   }
 }
 
+// Helper to get months for querying (current + previous if available)
+async function getTargetMonths(selectedMonth?: string) {
+  console.log("selectedMonth", selectedMonth);
+  return [selectedMonth ?? "03/2024"];
+
+  // if (selectedMonth) {
+  //   console.log("selectedMonth", selectedMonth);
+  //   const months = getAllValidMonths([selectedMonth]);
+  //   console.log("months", months);
+  //   return months;
+  // }
+
+  // const response = await getUniqueMonths();
+  // console.log("response", response);
+  // const months = getAllValidMonths(response);
+  // console.log("months2", months);
+  // return months;
+}
+
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getBasicAndCommutationData(category: string) {
+export async function getBasicAndCommutationData(category: string, month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
+    const allMonths = await getTargetMonths(month);
+    console.log("allMonths", allMonths);
 
     const allMonthsData = await getSqlDataBasedOnMonths(allMonths, category);
-    // console.log("all months data", allMonthsData);
+    console.log("all months data", allMonthsData.length);
     if (category === "basic") {
       /// Function for formatting the data based on the requirements --------/
       const tranformedData = transformBasicAndCommutationData(
         allMonthsData,
         category
       );
+      console.log("tranformedData", tranformedData.length);
 
       return tranformedData;
     } else {
       /// Function for formatting the data based on the requirements --------/
       const tranformedData = transformCommutationData(allMonthsData, category);
+      console.log("tranformedData2", tranformedData.length);
 
       return tranformedData;
     }
@@ -99,9 +119,9 @@ export async function getBasicAndCommutationData(category: string) {
 }
 
 
-async function ageSqlData() {
+async function ageSqlData(month?: string) {
   try {
-    const query = `
+    let query = `
     SELECT 
     s.ppoNumber,
     s.dateOfBirth,
@@ -115,6 +135,10 @@ INNER JOIN sbi_master s
     OR s.ppoNumber = a.newPPONo
   `;
 
+    if (month) {
+      query += ` WHERE a.month = '${month}'`;
+    }
+
     const mergedData = await sequelize.query(query, {
       type: sequelize.QueryTypes.SELECT,
     });
@@ -125,9 +149,9 @@ INNER JOIN sbi_master s
   }
 }
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getAgeData(month: string) {
+export async function getAgeData(month?: string) {
   try {
-    const allMonthsData = await ageSqlData();
+    const allMonthsData = await ageSqlData(month);
 
     const formatAgeDataResponse = formatAgeData(allMonthsData);
 
@@ -138,14 +162,11 @@ export async function getAgeData(month: string) {
   }
 }
 
-/// Function for getting the new pensioner data --------------------------------/
+// Function for getting the new pensioner data --------------------------------/
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getNewPensionerResponse() {
+export async function getNewPensionerResponse(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData: any[] = await getNewPensionerData(allMonths);
 
     /// Function for formatting the data based on the requirements --------/
@@ -157,12 +178,9 @@ export async function getNewPensionerResponse() {
 }
 
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getStoppedPensionersResponse() {
+export async function getStoppedPensionersResponse(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData: any[] = await getNewPensionerData(allMonths);
 
     /// Function for formatting the data based on the requirements --------/
@@ -174,12 +192,9 @@ export async function getStoppedPensionersResponse() {
 }
 
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getActivePensionersResponse() {
+export async function getActivePensionersResponse(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData: any[] = await getNewPensionerData(allMonths);
 
     /// Function for formatting the data based on the requirements --------/
@@ -191,12 +206,9 @@ export async function getActivePensionersResponse() {
 }
 
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getFamilyPensionerTransitionResponse() {
+export async function getFamilyPensionerTransitionResponse(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData: any[] = await getNewPensionerData(allMonths);
 
     /// Function for formatting the data based on the requirements --------/
@@ -208,12 +220,9 @@ export async function getFamilyPensionerTransitionResponse() {
 }
 
 ////// Function for getting the basic and commutation data -------------------------------------------/
-export async function getFamilyPensionData() {
+export async function getFamilyPensionData(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData: any[] = await getNewPensionerData(allMonths);
 
     /// Function for formatting the data based on the requirements --------/
@@ -227,12 +236,9 @@ export async function getFamilyPensionData() {
 ////// Function for getting the basic and commutation data -------------------------------------------/
 
 ////// Function for getting the age bracket data -------------------------------------------/
-export async function getAgeBracketData() {
+export async function getAgeBracketData(month?: string) {
   try {
-    const response = await getUniqueMonths();
-    //// Function for getting all the months inlcuding the previous one's
-    const allMonths = getAllValidMonths(response);
-
+    const allMonths = await getTargetMonths(month);
     const allMonthsData = await getAgeSqlData(allMonths);
     const { arpanData, sbiData } = allMonthsData;
 
@@ -714,7 +720,7 @@ export async function getCsvComparisonData(date: string, username: string) {
       },
     };
 
-    
+
     const finalSummaryData = calculateOtherFromSummaryData(summaryData);
 
     //inserting the log for this task
@@ -732,26 +738,26 @@ export async function getCsvComparisonData(date: string, username: string) {
     console.log("Date and Time:", year, month, day, hours, minutes, seconds);
 
     const datetime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    
+
     const row = {
-        user: username,
-        task: "Unlinked data CSV download",
-        createdAt: datetime,
+      user: username,
+      task: "Unlinked data CSV download",
+      createdAt: datetime,
     };
     console.log("starting putting log data");
-    
-    const transaction = await sequelize.transaction(); 
-    try{
+
+    const transaction = await sequelize.transaction();
+    try {
       await Logs.sync({ alter: true });
       console.log("Reached here");
-                  
+
       await Logs.create(row, { transaction });
       console.log("Reached here2");
-                  
+
       await transaction.commit();
       console.log("Log entry created successfully");
     }
-    catch(error){
+    catch (error) {
       console.error("Error creating log entry:", error);
       await transaction.rollback();
     }

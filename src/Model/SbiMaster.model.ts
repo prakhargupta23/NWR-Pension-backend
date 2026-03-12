@@ -41,6 +41,7 @@ const SbiMaster = sequelize.define(
   },
   {
     freezeTableName: true,
+    timestamps: false,
     indexes: [
       {
         fields: ["ppoNumber"], // Index on newPPONo

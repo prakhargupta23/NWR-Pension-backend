@@ -101,6 +101,7 @@ const Arpan = sequelize.define(
   },
   {
     freezeTableName: true,
+    timestamps: false, // Disable automatic createdAt and updatedAt
     indexes: [
       {
         fields: ["newPPONo"], // Index on newPPONo

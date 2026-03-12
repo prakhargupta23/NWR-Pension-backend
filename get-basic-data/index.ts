@@ -8,8 +8,12 @@ const httpTrigger: AzureFunction = async function (
 ): Promise<void> {
   try {
     // Call the insertData function
-    console.log("Request received");
-    const result = await getBasicAndCommutationData(req.query.category);
+    const { category, month, year } = req.query;
+    const formattedMonth = month && year ? `${month.padStart(2, "0")}/${year}` : undefined;
+
+    console.log("Request received for category:", category, "month:", formattedMonth);
+    const result = await getBasicAndCommutationData(category, formattedMonth);
+    console.log("basic data result", result.length);
     // Return success response
     context.res = {
       status: 200,
@@ -22,7 +26,7 @@ const httpTrigger: AzureFunction = async function (
   } catch (error) {
     // Handle errors and return response
     console.error("Error in get-basic-data function:", error.message);
-    
+
     context.res = {
       status: 500,
       body: { success: false, message: `Error: ${error.message}` },

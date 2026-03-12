@@ -34,7 +34,7 @@ export async function getSqlDataBasedOnMonths(months: any, category: string) {
     } else {
       throw new Error("Invalid category provided");
     }
-    console.log("Selected reacges");
+    console.log("Starting DB query for months:", months);
     const results = await ArpanModel.findAll({
       where: {
         month: months, // Sequelize automatically handles IN condition
@@ -42,11 +42,15 @@ export async function getSqlDataBasedOnMonths(months: any, category: string) {
       attributes, // Fetch only selected attributes
       raw: true, // Returns plain JSON objects instead of Sequelize instances
     });
-    // console.log("Results fetched:",results);
+    console.log("Query completed successfully.");
+    console.log("Results fetched count:", results.length);
+    // if (results.length > 0) {
+    //   console.log("Sample row:", JSON.stringify(results[0]).substring(0, 100) + "...");
+    // }
     return results;
   } catch (error) {
     console.error("Error fetching data based on months:", error);
-    throw new Error("Error fetching data from the database");
+    throw new Error("Error fetching data from the database" + error.message);
   }
 }
 

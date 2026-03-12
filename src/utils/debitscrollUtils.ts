@@ -3,7 +3,7 @@ export function transformBasicAndCommutationData(
   categoryType: string
 ) {
   // console.log("dat1",data);
-  console.log("categoryTypesdkfj");
+  console.log("categoryTypesdkfj", categoryType);
   const categoryKey =
     categoryType === "basic" ? "basicCategory" : "commutationCategory";
   const mismatchKey =

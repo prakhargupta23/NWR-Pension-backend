@@ -1,10 +1,10 @@
-import { QueryTypes } from "sequelize";
-
-const ArpanModel = require("../Model/Arpan.model"); // Import models
-const DebitModel = require("../Model/Debit.model");
+import { QueryTypes, DataTypes } from "sequelize";
 import sequelize from "../config/sequelize";
+
+const ArpanModel = require("../Model/Arpan.model");
+const DebitModel = require("../Model/Debit.model");
 const SbiMaster = require("../Model/SbiMaster.model");
-const { DataTypes } = require("sequelize");
+
 // Map table names to models
 const models = {
   arpan: ArpanModel,
@@ -12,616 +12,286 @@ const models = {
 };
 
 /**
- * Function to insert multiple records dynamically based on tableName.
- * @param {string} tableName - The name of the table.
- * @param {Array<Object>} dataArray - The array of data objects to insert.
- * @returns {Promise<Array<Object>>} - Returns the inserted records.
+ * Function to ensure table exists by syncing the model.
  */
 export async function ensureTableExists(model: any, modelName: string) {
   const queryInterface = sequelize.getQueryInterface();
-
-  // Check if the table exists
   const tableExists = await queryInterface.tableExists(model.getTableName());
 
-  // Sync if the table doesn't exist
   if (!tableExists) {
     await model.sync();
-  } else {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*                              TABLE QUERY LOGIC                             */
+/* -------------------------------------------------------------------------- */
+
 export async function getTableDetails(query: any) {
-  if (query === "stopped pensioner trend") {
-    try {
-      // First, get the list of valid current months
-      const validMonths = await sequelize.query(
-        `WITH UniqueMonths AS (
-        SELECT DISTINCT month FROM arpan
-      ),
-      ValidMonths AS (
-        -- Only include months where the previous month exists
-        SELECT DISTINCT um.month AS currentMonth
-        FROM UniqueMonths um
-        JOIN UniqueMonths prevMonth 
-          ON prevMonth.month = FORMAT(DATEADD(MONTH, -1, CONVERT(DATE, '01/' + um.month, 103)), 'MM/yyyy')
-      )
-      SELECT currentMonth AS month
-      FROM ValidMonths
-      ORDER BY CONVERT(DATE, '01/' + currentMonth, 103);`,
-        { type: QueryTypes.SELECT }
-      );
-
-      // Prepare an array of query promises (one for each valid month)
-      const queries = validMonths.map(({ month: currentMonth }: { month: string }) => {
-        // Parse month and year as numbers
-        const [monthStr, yearStr] = currentMonth.split("/");
-        const mm = parseInt(monthStr, 10);
-        const yyyy = parseInt(yearStr, 10);
-
-        let prevMonth: number;
-        let prevYear: number;
-
-        if (mm === 1) {
-          prevMonth = 12;
-          prevYear = yyyy - 1;
-        } else {
-          prevMonth = mm - 1;
-          prevYear = yyyy;
-        }
-
-        // Format previous month to MM/yyyy
-        const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-
-        // Return the promise from executing the query with the current and previous month
-        return sequelize.query(
-          `SELECT 
-            :currentMonth AS month,
-            COUNT(DISTINCT COALESCE(prev.newPPONo, prev.oldPPONo)) AS StoppedPensioners,
-            SUM(prev.totalPension) AS StoppedPensionerAmount
-         FROM arpan prev
-         WHERE 
-            prev.month = :previousMonth
-            AND NOT EXISTS (
-              SELECT 1
-              FROM arpan a
-              WHERE 
-                a.month = :currentMonth
-                AND (
-                  COALESCE(prev.newPPONo, prev.oldPPONo) = a.newPPONo 
-                  OR COALESCE(prev.newPPONo, prev.oldPPONo) = a.oldPPONo
-                )
-            );`,
-          {
-            replacements: { currentMonth, previousMonth },
-            type: QueryTypes.SELECT,
-          }
-        );
-      });
-
-      // Execute all queries in parallel
-      const resultsList = await Promise.all(queries);
-      // Flatten the list if needed (each query returns an array)
-      const finalResults = resultsList.flat();
-
-      return {
-        arpan: finalResults,
-        debit: [],
-        success: true,
-        message: "Fetching successfull",
-      };
-    } catch (error) {
-      console.log(error.message);
-
-      return {
-        success: false,
-        message: "Unable to fetch the data",
-
-        arpan: [],
-        debit: [],
-      };
-    }
-  } else if (query === "active pensioner trend") {
-    try {
-      // First, get the list of valid current months
-      const validMonths = await sequelize.query(
-        `WITH UniqueMonths AS (
-            SELECT DISTINCT month FROM arpan
-         ),
-         ValidMonths AS (
-            -- Only include months where the previous month exists
-            SELECT DISTINCT um.month AS currentMonth
-            FROM UniqueMonths um
-            JOIN UniqueMonths prevMonth 
-              ON prevMonth.month = FORMAT(DATEADD(MONTH, -1, CONVERT(DATE, '01/' + um.month, 103)), 'MM/yyyy')
-         )
-         SELECT currentMonth AS month
-         FROM ValidMonths
-         ORDER BY CONVERT(DATE, '01/' + currentMonth, 103);`,
-        { type: QueryTypes.SELECT }
-      );
-
-      // Prepare an array of query promises (one for each valid month)
-      const queries = validMonths.map(({ month: currentMonth }: { month: string }) => {
-        // Parse month and year as numbers
-        const [monthStr, yearStr] = currentMonth.split("/");
-        const mm = parseInt(monthStr, 10);
-        const yyyy = parseInt(yearStr, 10);
-
-        let prevMonth: number;
-        let prevYear: number;
-
-        if (mm === 1) {
-          prevMonth = 12;
-          prevYear = yyyy - 1;
-        } else {
-          prevMonth = mm - 1;
-          prevYear = yyyy;
-        }
-
-        // Format previous month to MM/yyyy
-        const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-
-        // Return the promise from executing the query with the current and previous month
-        return sequelize.query(
-          `SELECT 
-              :currentMonth AS month,
-              COUNT(DISTINCT COALESCE(a.newPPONo, a.oldPPONo)) AS ActivePensioners,
-              SUM(a.totalPension) AS ActivePensionAmount
-           FROM arpan a
-           WHERE 
-              a.month = :currentMonth
-              AND EXISTS (
-                SELECT 1
-                FROM arpan prev
-                WHERE 
-                  prev.month = :previousMonth
-                  AND (
-                    COALESCE(prev.newPPONo, prev.oldPPONo) = a.newPPONo 
-                    OR COALESCE(prev.newPPONo, prev.oldPPONo) = a.oldPPONo
-                  )
-              );`,
-          {
-            replacements: { currentMonth, previousMonth },
-            type: QueryTypes.SELECT,
-          }
-        );
-      });
-
-      // Execute all queries in parallel
-      const resultsList = await Promise.all(queries);
-      // Flatten the list if needed (each query returns an array)
-      const finalResults = resultsList.flat();
-
-      return {
-        arpan: finalResults,
-        debit: [],
-        success: true,
-        message: "Fetching successful",
-      };
-    } catch (error) {
-      console.log(error.message);
-
-      return {
-        success: false,
-        message: "Unable to fetch the data",
-        arpan: [],
-        debit: [],
-      };
-    }
-  } else if (query === "family pensioner transition trend") {
-    try {
-      // First, get the list of valid current months
-      const validMonths = await sequelize.query(
-        `WITH UniqueMonths AS (
-            SELECT DISTINCT month FROM arpan
-         ),
-         ValidMonths AS (
-            -- Only include months where the previous month exists
-            SELECT DISTINCT um.month AS currentMonth
-            FROM UniqueMonths um
-            JOIN UniqueMonths prevMonth 
-              ON prevMonth.month = FORMAT(DATEADD(MONTH, -1, CONVERT(DATE, '01/' + um.month, 103)), 'MM/yyyy')
-         )
-         SELECT currentMonth AS month
-         FROM ValidMonths
-         ORDER BY CONVERT(DATE, '01/' + currentMonth, 103);`,
-        { type: QueryTypes.SELECT }
-      );
-
-      // Prepare an array of query promises (one for each valid month)
-      const queries = validMonths.map(({ month: currentMonth }: { month: string }) => {
-        // Parse month and year as numbers
-        const [monthStr, yearStr] = currentMonth.split("/");
-        const mm = parseInt(monthStr, 10);
-        const yyyy = parseInt(yearStr, 10);
-
-        let prevMonth: number;
-        let prevYear: number;
-
-        if (mm === 1) {
-          prevMonth = 12;
-          prevYear = yyyy - 1;
-        } else {
-          prevMonth = mm - 1;
-          prevYear = yyyy;
-        }
-
-        // Format previous month to MM/yyyy
-        const previousMonth = `${prevMonth.toString().padStart(2, "0")}/${prevYear}`;
-
-        // Return the promise from executing the query with the current and previous month
-        return sequelize.query(
-          `SELECT 
-              :currentMonth AS month,
-              COUNT(*) AS TransitionCount,
-              SUM(a.totalPension) AS TransitionAmount
-           FROM arpan a
-           WHERE LOWER(a.typeOfPension) = 'f'
-             AND a.month = :currentMonth
-             AND EXISTS (
-               SELECT 1
-               FROM (
-                   SELECT oldPPONo AS PPONo FROM arpan 
-                   WHERE LOWER(typeOfPension) = 'r' 
-                     AND month = :previousMonth
-                   UNION
-                   SELECT newPPONo AS PPONo FROM arpan 
-                   WHERE LOWER(typeOfPension) = 'r' 
-                     AND month = :previousMonth
-               ) t
-               WHERE t.PPONo = a.oldPPONo OR t.PPONo = a.newPPONo
-             )
-           GROUP BY a.month;`,
-          {
-            replacements: { currentMonth, previousMonth },
-            type: QueryTypes.SELECT,
-          }
-        );
-      });
-
-      // Execute all queries in parallel
-      const resultsList = await Promise.all(queries);
-      // Flatten the list if needed (each query returns an array)
-      const finalResults = resultsList.flat();
-
-      return {
-        arpan: finalResults,
-        debit: [],
-        success: true,
-        message: "Fetching successful",
-      };
-    } catch (error) {
-      console.log(error.message);
-
-      return {
-        success: false,
-        message: "Unable to fetch the data",
-        arpan: [],
-        debit: [],
-      };
-    }
-  }
-
   try {
     const results = await sequelize.query(query, {
       type: QueryTypes.SELECT,
     });
 
-
-    // Ensure results is always an array
     const formattedResults = Array.isArray(results) ? results : [results];
 
     return {
       arpan: formattedResults,
       debit: [],
       success: true,
-      message: "Fetching successfull",
+      message: "Fetching successful",
     };
   } catch (error) {
     console.log(error.message);
 
     return {
       success: false,
-      message: "Unable to fetch the data",
-
+      message: "Unable to fetch data",
       arpan: [],
       debit: [],
     };
   }
 }
 
-
-
+/* -------------------------------------------------------------------------- */
+/*                         DATA TYPE CONVERSION FUNCTION                      */
+/* -------------------------------------------------------------------------- */
 
 const convertBatchDataTypes = (batch, model, month) => {
   return batch.map((entry, index) => {
-    const newEntry = { ...entry, month }; // Add month to each entry
+    const newEntry = { ...entry, month };
 
     for (const key in entry) {
       if (Object.hasOwnProperty.call(entry, key)) {
         const value = entry[key];
 
-        // Check if the key exists in the model and has FLOAT type
-        if (model.rawAttributes[key]?.type instanceof DataTypes.FLOAT) {
-          if (value == "" || value == null) {
-            newEntry[key] = null;
-          } else {
-            // Try converting to float, throw an error if it fails
-            const floatValue = parseFloat(value);
-            if (isNaN(floatValue)) {
-              throw new Error(
-                `❌ Invalid float conversion for key "${key}" in batch at index ${index}: "${value}"`
-              );
-            }
-            newEntry[key] = floatValue;
+        // Handle various null/empty cases case-insensitively
+        if (value === "" || value === undefined || value === null || String(value).toUpperCase() === "NULL") {
+          newEntry[key] = null;
+          continue;
+        }
+
+        const attribute = model.rawAttributes[key];
+        if (attribute?.type instanceof DataTypes.FLOAT) {
+          const floatValue = parseFloat(value);
+          if (isNaN(floatValue)) {
+            throw new Error(`Invalid float conversion for key "${key}" at row ${index}: "${value}"`);
           }
+          newEntry[key] = floatValue;
+        } else if (attribute?.type instanceof DataTypes.STRING || attribute?.type.key === 'STRING') {
+          // Safety: Truncate strings to their defined length (usually 255) to prevent truncation errors
+          const limit = attribute.type._length || 255;
+          const strValue = String(value);
+          newEntry[key] = strValue.length > limit ? strValue.substring(0, limit) : strValue;
         } else {
-          // Convert everything else to string
-          newEntry[key] = value !== null ? String(value) : null;
+          newEntry[key] = value;
         }
       }
     }
+
     return newEntry;
   });
 };
 
+/* -------------------------------------------------------------------------- */
+/*                            INSERT CSV DATA                                 */
+/* -------------------------------------------------------------------------- */
+
 export default async function insertData(tableName, dataArray, month) {
-  console.log("data insertion function reached")
+  console.log(`Data insertion function reached for table: ${tableName}`);
+
   try {
-    console.log("check data")
     if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new Error("❌ Data should be a non-empty array.");
+      throw new Error("Data should be a non-empty array.");
     }
 
     if (!month) {
-      throw new Error("❌ Month is required to insert data.");
+      throw new Error("Month is required to insert data.");
     }
-    console.log("finding model")
-    // Find the correct model based on tableName
-    const Model = models[tableName];
 
+    const Model = models[tableName.toLowerCase()];
     if (!Model) {
-      throw new Error(`❌ No model found for table: ${tableName}`);
+      throw new Error(`No model found for table: ${tableName}`);
     }
-    console.log("ensuring table")
-    // Ensure table exists before inserting
+
     await ensureTableExists(Model, tableName);
-    console.log("ensured table")
+
+    console.log("Deleting existing data for month:", month);
     try {
-      // **Delete only entries that match the given month**
-      await Model.destroy({
-        where: { month }, // Assuming the table has a "month" column
-      });
+      await Model.destroy({ where: { month } });
     } catch (e) {
-      console.log("❌ Error while deleting existing data for month:", month);
-      console.error(e);
+      console.log("Error while deleting existing data:", e.message);
     }
-    console.log("deleting existing data")
-    // Batch insert mechanism (400 entries at a time)
-    const batchSize = 400;
-    let batchStart = 0;
-    let batchEnd = batchSize;
 
-    while (batchStart < dataArray.length) {
-      const batch = dataArray.slice(batchStart, batchEnd);
+    // Arpan has ~25 cols. MSSQL limit is 2100 params. 80 * 25 = 2000 (Safe).
+    const batchSize = tableName.toLowerCase() === "arpan" ? 80 : 300;
 
-      // Convert data types for the batch and add month
+    console.log(`Starting insertion of ${dataArray.length} records in batches of ${batchSize}...`);
+
+    for (let i = 0; i < dataArray.length; i += batchSize) {
+      const batch = dataArray.slice(i, i + batchSize);
       const convertedBatch = convertBatchDataTypes(batch, Model, month);
 
-      // Insert the current batch (if an error occurs, it stops here)
-      await Model.bulkCreate(convertedBatch);
-
-      // Update the start and end for the next batch
-      batchStart = batchEnd;
-      batchEnd = batchStart + batchSize;
+      try {
+        await Model.bulkCreate(convertedBatch, {
+          returning: false,
+          validate: false,
+          logging: false,
+        });
+        console.log(`✅ Batch ${Math.floor(i / batchSize) + 1} for ${tableName} inserted (${Math.min(i + batchSize, dataArray.length)}/${dataArray.length})`);
+      } catch (err) {
+        console.error(`❌ Batch failed at index ${i}:`);
+        // Dig into AggregateError to find the actual SQL message
+        if (err.original?.errors) {
+          err.original.errors.forEach((e, idx) => {
+            console.error(`  Error ${idx + 1}: ${e.message}`);
+          });
+        } else {
+          console.error(`  Message: ${err.message}`);
+        }
+        throw err;
+      }
     }
-    console.log("inserting data")
+
+    console.log("All batches inserted successfully");
     return {
-      message: `✅ All data inserted into ${tableName} for month: ${month}.`,
+      message: `All data inserted into ${tableName} for month: ${month}`,
       success: true,
     };
   } catch (error) {
-    console.log("went for this error");
-    console.log(error.message);
-
+    console.error("InsertData outer error:", error.message);
     throw new Error(error.message);
   }
 }
 
-//// Funciton for adding trend data -------------------------------------------/
+/* -------------------------------------------------------------------------- */
+/*                         INSERT TREND DATA                                  */
+/* -------------------------------------------------------------------------- */
+
 export async function insertTrendData(tableName, dataArray, month) {
   try {
     if (!Array.isArray(dataArray) || dataArray.length === 0) {
       throw new Error("Data should be a non-empty array.");
     }
 
-    // Find the correct model based on tableName
-    const Model = models[tableName];
-
+    const Model = models[tableName.toLowerCase()];
     if (!Model) {
       throw new Error(`No model found for table: ${tableName}`);
     }
 
-    // Ensure table exists before inserting
     await ensureTableExists(Model, tableName);
 
-    // **Truncate the table before inserting new data**
+    const modifiedDataArray = dataArray.map((row) => ({ ...row, month }));
+    const batchSize = 200;
 
-    // Attach the month to each row
-    const modifiedDataArray = dataArray.map((row) => ({
-      ...row,
-      month: month, // Ensure the month is added to each row
-    }));
-
-    // Batch insert mechanism (400 entries at a time)
-    const batchSize = 400;
-    let batchStart = 0;
-    let batchEnd = batchSize;
-
-    while (batchStart < modifiedDataArray.length) {
-      const batch = modifiedDataArray.slice(batchStart, batchEnd);
-      // Insert the current batch
-      const newRecords = await Model.bulkCreate(batch);
-      console.log(
-        `✅ Batch of ${batch.length} records inserted into ${tableName}:`,
-        newRecords.map((r) => r.toJSON())
-      );
-
-      // Update the start and end for the next batch
-      batchStart = batchEnd;
-      batchEnd = batchStart + batchSize;
-
-      // Optional: Add a small delay to avoid hitting rate limits or overwhelming the DB
-      // await new Promise((resolve) => setTimeout(resolve, 100));
+    for (let i = 0; i < modifiedDataArray.length; i += batchSize) {
+      const batch = modifiedDataArray.slice(i, i + batchSize);
+      await Model.bulkCreate(batch, {
+        returning: false,
+        validate: false,
+        logging: false,
+      });
+      console.log(`✅ Batch ${Math.floor(i / batchSize) + 1} for trend ${tableName} inserted (${Math.min(i + batchSize, modifiedDataArray.length)}/${modifiedDataArray.length})`);
     }
-    console.log("data inserted successfully")
 
-    return `✅ All data inserted into ${tableName}.`;
+    console.log("Trend data inserted successfully");
+    return `All trend data inserted into ${tableName}`;
   } catch (error) {
-    console.error("❌ Error inserting data:");
-    console.error("➡ Message:", error.message);
-    console.error("➡ Stack Trace:", error.stack);
-    console.error("➡ Full Error Object:", error);
-
-    throw error; // Re-throw the error so it can be handled by the caller
+    console.error("Error inserting trend data:", error);
+    throw error;
   }
 }
 
-///// Function for generating the data from the table based on query----/
-export async function getQueryData(query: any) {
-  try {
-    console.log("Executing query:", query);
+/* -------------------------------------------------------------------------- */
+/*                         GENERIC QUERY EXECUTOR                             */
+/* -------------------------------------------------------------------------- */
 
+export async function getQueryData(query) {
+  try {
     const results = await sequelize.query(query, {
       type: QueryTypes.SELECT,
     });
-
-
-    // Ensure results is always an array
-    const formattedResults = Array.isArray(results) ? results : [results];
-
-    return formattedResults;
+    return Array.isArray(results) ? results : [results];
   } catch (error) {
-    console.error("Sequelize Query Error:", error);
+    console.error("Query Error:", error);
     throw new Error(`Query execution failed: ${error.message}`);
   }
 }
 
-export async function getMergedTableQueryData(queryCondition: string | null) {
+/* -------------------------------------------------------------------------- */
+/*                         MERGED QUERY DATA                                  */
+/* -------------------------------------------------------------------------- */
+
+export async function getMergedTableQueryData(queryCondition) {
   try {
-    // Ensure queryCondition is valid
-    const finalQueryCondition =
-      queryCondition && queryCondition.trim() ? queryCondition : "1=1";
-
-    console.log(
-      "Executing query with join and condition:",
-      finalQueryCondition
-    );
-
-    // Query with JOIN between SbiMaster and arpan, applying filters dynamically
+    const finalQueryCondition = queryCondition && queryCondition.trim() ? queryCondition : "1=1";
     const query = `
       SELECT s.*, a.*
       FROM SbiMaster s
       LEFT JOIN arpan a
         ON s.ppoNumber = a.newPPONo
         OR s.ppoNumber = a.oldPPONo
-      WHERE ${finalQueryCondition} 
+      WHERE ${finalQueryCondition}
     `;
-
-    const results = await sequelize.query(query, {
-      type: QueryTypes.SELECT,
-    });
-
-    console.log("Final Results:", results);
+    const results = await sequelize.query(query, { type: QueryTypes.SELECT });
     return results;
   } catch (error) {
-    console.error("Sequelize Query Error:", error);
+    console.error("Merged query error:", error);
     throw new Error(`Query execution failed: ${error.message}`);
   }
 }
 
-//// Function for the deleting the sql data --------------------------------------/
+/* -------------------------------------------------------------------------- */
+/*                            DELETE SQL DATA                                 */
+/* -------------------------------------------------------------------------- */
+
 export async function deleteSqlData(tableName = "arpan") {
   try {
-    // Find the correct model based on tableName
-    const Model = models[tableName];
-    console.log("this is model");
-    console.log("Model:", Model);
-
+    const Model = models[tableName.toLowerCase()];
     if (!Model) {
       throw new Error(`No model found for table: ${tableName}`);
     }
-
-    // Ensure table exists before inserting
     await ensureTableExists(Model, tableName);
-
-    // **Truncate the table before inserting new data**
     await Model.destroy({ truncate: true });
-    return {
-      message: "All data has been deleted",
-      success: true,
-    };
+    return { message: "All data deleted", success: true };
   } catch (error) {
-    console.error("Sequelize Query Error:", error);
+    console.error("Delete error:", error);
     throw new Error(`Query execution failed: ${error.message}`);
   }
 }
 
-//// Function for inserting the sbi csv data ---------------------------------------/
+/* -------------------------------------------------------------------------- */
+/*                         INSERT SBI CSV DATA                                */
+/* -------------------------------------------------------------------------- */
+
 export async function insertSbiCsvData(dataArray) {
   try {
     if (!Array.isArray(dataArray) || dataArray.length === 0) {
-      throw new Error("❌ Data should be a non-empty array.");
+      throw new Error("Data should be a non-empty array.");
     }
-
-    console.log("✔ Model found: SbiMaster");
-
-    // Ensure table exists before inserting
     await ensureTableExists(SbiMaster, "sbi_master");
 
-    console.log("this is dataarray length");
-    console.log(dataArray.length);
+    const batchSize = 100;
+    for (let i = 0; i < dataArray.length; i += batchSize) {
+      const batch = dataArray.slice(i, i + batchSize).map((entry) => {
+        return Object.fromEntries(
+          Object.entries(entry).map(([key, value]) => [
+            key,
+            (value === "" || value === undefined || value === null || String(value).toUpperCase() === "NULL") ? null : value,
+          ])
+        );
+      });
 
-    // Batch insert mechanism (400 entries at a time)
-    const batchSize = 400;
-    let batchStart = 0;
-    let batchEnd = batchSize;
-
-    while (batchStart < dataArray.length) {
-      const batch = dataArray
-        .slice(batchStart, batchEnd)
-        .map((entry, index) => {
-          try {
-            return Object.fromEntries(
-              Object.entries(entry).map(([key, value]) => [
-                key,
-                value != null ? String(value) : null,
-              ])
-            );
-          } catch (error) {
-            throw new Error(
-              `❌ Error converting entry at batch index ${batchStart + index
-              }: ${JSON.stringify(entry)}`
-            );
-          }
-        });
-
-      // Insert the current batch (if an error occurs, it stops here)
-      await SbiMaster.bulkCreate(batch);
-
-      // Update the start and end for the next batch
-      batchStart = batchEnd;
-      batchEnd = batchStart + batchSize;
+      await SbiMaster.bulkCreate(batch, {
+        returning: false,
+        validate: false,
+        logging: false,
+      });
+      console.log(`✅ SBI Batch ${Math.floor(i / batchSize) + 1} inserted (${Math.min(i + batchSize, dataArray.length)}/${dataArray.length})`);
     }
-
-    return {
-      message: `✅ All data inserted into sbi_master .`,
-      success: true,
-    };
+    return { message: "All data inserted into sbi_master", success: true };
   } catch (error) {
-    console.log("went for this error");
-    console.log(error.message);
-
+    console.log("Insert SBI CSV error:", error.message);
     throw new Error(error.message);
   }
 }
