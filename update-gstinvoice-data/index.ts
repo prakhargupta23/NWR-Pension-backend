@@ -6,13 +6,13 @@ const httpTrigger: AzureFunction = async function (
   req: HttpRequest
 ): Promise<void> {
   try {
-    console.log("finance note data updating");
+    console.log("gst note data updating");
     const { row } = req.body;
 
     console.log(row)
 
     const result = await updateExpenditureReportData(row);
-    
+
     // Return success response
     context.res = {
       status: 200,
@@ -27,9 +27,9 @@ const httpTrigger: AzureFunction = async function (
     // Handle errors and return response
     context.res = {
       status: 500,
-      body: { 
-        success: false, 
-        message: `Error retrieving note data: ${error.message}` 
+      body: {
+        success: false,
+        message: `Error retrieving note data: ${error.message}`
       },
     };
   }

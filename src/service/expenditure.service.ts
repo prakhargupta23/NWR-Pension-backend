@@ -55,7 +55,9 @@ export async function getfiledata(prompt: string, file: string) {
         pdf: file
       });
       extractedText = response.data.text;
-      // console.log("Extracted text:", response.data.text);
+      console.log("Extracted text:", response.data.text);
+
+
       // console.log("OCR URL IN CODE:",
       //   "https://flaskocr-bwctd7d9d0gvgveu.canadacentral-01.azurewebsites.net/ocr"
       // );
@@ -340,8 +342,8 @@ export const expenditureService = {
     try {
       if (documentType === 'FinanceNote') {
         console.log("Finance Note data insertion", row)
-        const { SNo, co6No, ld, sd, otherDeductions, netPayment } = row;
-        console.log("these", SNo, co6No, ld, sd, otherDeductions, netPayment)
+        const { SNo, sd } = row;
+        // console.log("these", SNo, co6No, ld, sd, otherDeductions, netPayment)
 
         const recieptdata: any = await ReceiptNote.findOne({
           where: { SNo: SNo },
@@ -349,96 +351,131 @@ export const expenditureService = {
         });
         console.log("recieptdata in finance note generation", recieptdata)
 
-
-        const purchaseorderdata: any = await PurchaseOrder.findOne({
+        const gstInvoiceData: any = await GstInvoice.findOne({
           where: { SNo: SNo },
           raw: true,
         });
-        console.log("purchaseorderdata in finance note generation", purchaseorderdata)
+        console.log("gstInvoiceData in finance note generation", gstInvoiceData)
+
+
+        // const purchaseorderdata: any = await PurchaseOrder.findOne({
+        //   where: { SNo: SNo },
+        //   raw: true,
+        // });
+        // console.log("purchaseorderdata in finance note generation", purchaseorderdata)
 
         const recieptnotePoSr = recieptdata.POSrNo;
         console.log("recieptnotePoSr in finance note generation", recieptnotePoSr)
 
-        const poSrArray = purchaseorderdata.POSr;
+        // const poSrArray = purchaseorderdata.POSr;
 
-        console.log("purchaseorderdate in finance note generation", poSrArray)
-        console.log("type of data of purchaseorderdate in finance note generation", typeof poSrArray)
-        const jsonposr = JSON.parse(poSrArray);
-        console.log("jsonposr in finance note generation", jsonposr)
-
-        // POSr is a JSON array of table rows; parse it if it's a string
-        // const poSrArray = typeof purchaseorderdate === 'string'
-        //   ? JSON.parse(purchaseorderdate)
-        //   : purchaseorderdate;
-
-        // Find the matching row in the POSr array by comparing Sr/P.O.Sr with the receipt note's POSrNo
-        // const matchingPoSrEntry = Array.isArray(poSrArray)
-        //   ? poSrArray.find((entry: any) => {
-        //     const srValue = entry["PO Sr. No."];
-        //     return srValue && String(srValue).trim() === String(recieptnotePoSr).trim();
-        //   })
-        //   : null;
-
-        // console.log("matchingPoSrEntry in finance note generation", matchingPoSrEntry)
-
-        let completiondate = ""
-        if (Array.isArray(jsonposr)) {
-          console.log("array")
-          const matchingEntry = Array.isArray(jsonposr)
-            ? jsonposr.find((entry: any) =>
-              String(entry?.["PO Sr. No."] ?? "").trim() ===
-              String(recieptnotePoSr ?? "").trim()
-            )
-            : null;
-          console.log("row for completion date", matchingEntry)
-          completiondate = matchingEntry?.["Complete"] || null;
-        } else {
-          console.log("json")
-          completiondate = jsonposr["Complete"];
-        }
-
-        // const matchingEntry = Array.isArray(jsonposr)
-        //   ? jsonposr.find((entry: any) =>
-        //     String(entry?.["PO Sr. No."] ?? "").trim() ===
-        //     String(recieptnotePoSr ?? "").trim()
-        //   )
-        //   : null;
-        // console.log("row for completion date", matchingEntry)
-        // const completiondate = matchingEntry?.["Complete"] || null;
-
-        //const completiondate = jsonposr["Complete"];
+        // console.log("purchaseorderdate in finance note generation", poSrArray)
+        // console.log("type of data of purchaseorderdate in finance note generation", typeof poSrArray)
+        // const jsonposr = JSON.parse(poSrArray);
+        // console.log("jsonposr in finance note generation", jsonposr)
 
 
-        console.log("completiondate:", completiondate);
+        // let completiondate = ""
+        // if (Array.isArray(jsonposr)) {
+        //   console.log("array")
+        //   const matchingEntry = Array.isArray(jsonposr)
+        //     ? jsonposr.find((entry: any) =>
+        //       String(entry?.["PO Sr. No."] ?? "").trim() ===
+        //       String(recieptnotePoSr ?? "").trim()
+        //     )
+        //     : null;
+        //   console.log("row for completion date", matchingEntry)
+        //   completiondate = matchingEntry?.["Complete"] || null;
+        // } else {
+        //   console.log("json")
+        //   completiondate = jsonposr["Complete"];
+        // }
+
+
+        const DueDateOfDelivery = recieptdata.DueDateOfDelivery;
+        const ActualDateOfSupply = recieptdata.ActualDateOfSupply;
         const dateofacceptance = recieptdata.DateofAcceptance;
-        console.log("completiondate in finance note generation", completiondate)
-        console.log("dateofacceptance in finance note generation", dateofacceptance)
 
+        const Basic = recieptdata.Rate * recieptdata.QtyReceived;
+        console.log("Basic in finance note generation", Basic)
 
-        const daysdiff = getDaysDifference(completiondate, dateofacceptance);
+        const daysdiff = getDaysDifference(DueDateOfDelivery, ActualDateOfSupply);
         console.log("daysdiff in finance note generation", daysdiff, typeof (daysdiff))
         const value = Number(recieptdata.Value);
         console.log("type of", recieptdata.Value, typeof (value))
         const power = (daysdiff / 7);
 
         const multiplier = Math.min(0.5 * power, 10);
-        const Ld = multiplier * value;
+        let Ld = (multiplier * value) / 100;
+        if (daysdiff <= 0) {
+          Ld = 0;
+        }
         console.log("Ld in finance note generation", Ld)
 
 
 
+        const IncomeTax = Basic / 1000;
+        console.log("IncomeTax in finance note generation", IncomeTax)
 
+
+        const gst = (18 * Basic) / 100;
+        console.log("gst in finance note generation", gst)
+        const Gross = Basic + gst;
+        console.log("Gross in finance note generation", Gross)
+
+        // if(gstInvoiceData.)
+        const TDS = 2 * Basic / 100;
+        console.log("TDS in finance note generation", TDS)
+
+        const NetPayment = Gross - (Ld + TDS + IncomeTax);
+        console.log("NetPayment in finance note generation", NetPayment)
+
+        const Summary = `
+        Finance Note for S.No. ${SNo}
+        `
+
+        console.log("Finance note data", {
+          SNo: SNo || null,
+          Basic: Basic || null,
+          Ld: String(Ld) || null,
+          Sd: sd || null,
+          IncomeTax: IncomeTax || null,
+          Gross: Gross || null,
+          TDS: TDS || null,
+          Rate: recieptdata.Rate || null,
+          Quantity: recieptdata.QtyReceived || null,
+          Summary: Summary || null,
+
+          Created: null,
+        })
 
 
         await FinanceNote.create({
           SNo: SNo || null,
-          CO6No: co6No || null,
+          Basic: String(Basic) || null,
           Ld: String(Ld) || null,
-          Sd: sd || null,
-          Otherdedunctions: otherDeductions || null,
-          NetPayment: netPayment || null,
+          Sd: String(sd) || null,
+          IncomeTax: String(IncomeTax) || null,
+          Gross: String(Gross) || null,
+          TDS: String(TDS) || null,
+          Rate: String(recieptdata.Rate) || null,
+          Quantity: String(recieptdata.QtyReceived) || null,
+          Summary: String(Summary) || null,
+          NetPayment: String(NetPayment) || null,
           Created: null,
         });
+
+
+
+        // await FinanceNote.create({
+        //   SNo: SNo || null,
+        //   CO6No: co6No || null,
+        //   Ld: String(Ld) || null,
+        //   Sd: sd || null,
+        //   Otherdedunctions: otherDeductions || null,
+        //   NetPayment: netPayment || null,
+        //   Created: null,
+        // });
         console.log("Finance note created successfully")
         return { success: true, message: 'FinanceNote inserted successfully' };
       } else if (documentType === 'RejectionNote') {
@@ -472,6 +509,7 @@ export const expenditureService = {
         // Fetch by SNo if provided, else fetch all
         if (SNo) {
           const data = await FinanceNote.findOne({ where: { SNo: SNo }, raw: true });
+          console.log("data in finance note", data, SNo)
           return { success: true, data };
         } else {
           return { success: false, };
@@ -530,7 +568,9 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       QtyReceived: data["Qty. Received"],
       QtyAccepted: data["Qty. Accepted"],
       QtyRejected: data["Qty. Rejected"],
-      DateofAcceptance: data["Date of Acceptance"],
+      DateofAcceptance: data["Actual Date of Supply"],
+      ActualDateOfSupply: data["Actual Date of Supply"],
+      DueDateOfDelivery: data["Due Date of Delivery"]
     };
     console.log("receipt note row", row)
     try {
@@ -933,21 +973,21 @@ All matching and transformations are critical and must be properly followed duri
       }
 
 
+      const receiptNote = recieptnotedata?.[0] ? (typeof recieptnotedata[0].get === 'function' ? recieptnotedata[0].get({ plain: true }) : recieptnotedata[0]) : null;
+      const taxInvoice = taxinvoicedata?.[0] ? (typeof taxinvoicedata[0].get === 'function' ? taxinvoicedata[0].get({ plain: true }) : taxinvoicedata[0]) : null;
+      const gstInvoice = gstinvoicedata?.[0] ? (typeof gstinvoicedata[0].get === 'function' ? gstinvoicedata[0].get({ plain: true }) : gstinvoicedata[0]) : null;
+      const purchaseOrder = purchaseorderdata?.[0] ? (typeof purchaseorderdata[0].get === 'function' ? purchaseorderdata[0].get({ plain: true }) : purchaseorderdata[0]) : null;
+
       // Create a row in ExpenditureReport model
       try {
-        const ExpenditureReport = require("../Model/ExpenditureReport.model").ExpenditureReport;
         await ExpenditureReport.sync({ alter: true });
-        // Ensure we are working with plain objects
-        const receiptNote = recieptnotedata?.[0] ? (typeof recieptnotedata[0].get === 'function' ? recieptnotedata[0].get({ plain: true }) : recieptnotedata[0]) : null;
-        const taxInvoice = taxinvoicedata?.[0] ? (typeof taxinvoicedata[0].get === 'function' ? taxinvoicedata[0].get({ plain: true }) : taxinvoicedata[0]) : null;
-        const gstInvoice = gstinvoicedata?.[0] ? (typeof gstinvoicedata[0].get === 'function' ? gstinvoicedata[0].get({ plain: true }) : gstinvoicedata[0]) : null;
-        const purchaseOrder = purchaseorderdata?.[0] ? (typeof purchaseorderdata[0].get === 'function' ? purchaseorderdata[0].get({ plain: true }) : purchaseorderdata[0]) : null;
+
         const reportRow = {
           SNo: receiptNote?.SNo || null,
           IREPSNo: gstInvoice?.IREPSBillRegNo || null,
           Status: testanswer.Status,
           PONo: gstInvoice?.PONo || null,
-          Consignee: receiptNote.SupplierName, // No direct mapping in available data
+          Consignee: receiptNote?.SupplierName || null,
           InvoiceNo: gstInvoice?.TaxInvoiceNo || null,
           InvoiceDate: gstInvoice?.TaxInvoiceDate || null,
           RNoteNo: receiptNote?.RNoteNo || gstInvoice?.RNoteNo || null,
@@ -955,7 +995,6 @@ All matching and transformations are critical and must be properly followed duri
           TotalAmt: gstInvoice?.InvoiceAmount || null,
           Security: purchaseOrder?.SecurityMoney || null,
           Remarks: testanswer ? formattedRemark : null,
-          // Remarks: testanswer ? JSON.stringify(out) : null,
           Created: new Date()
         };
         await ExpenditureReport.create(reportRow);
@@ -963,6 +1002,15 @@ All matching and transformations are critical and must be properly followed duri
       } catch (error) {
         console.error("Error in ExpenditureReport creation:", error);
       }
+
+      // const row = {
+      //   SNo: receiptNote?.SNo || null,
+      //   sd: taxInvoice?.InvoiceAmount || null,
+      //   Created: new Date()
+      // }
+
+      // const financenoteinsertion = await expenditureService.putNoteData("FinanceNote", row);
+      // console.log("FinanceNote insertion", financenoteinsertion);
 
 
 

@@ -102,6 +102,14 @@ export const ReceiptNote = sequelize.define(
     QtyRejected: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+    ActualDateOfSupply: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    DueDateOfDelivery: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     }
   },
   {
