@@ -11,7 +11,7 @@ export const FinanceNote = sequelize.define(
       primaryKey: true,
       allowNull: false
     },
-    CO6No: {
+    Basic: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -23,16 +23,36 @@ export const FinanceNote = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    Otherdedunctions: {
+    Gross: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    NetPayment: {
+    IncomeTax: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    TDS: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    Rate: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    Quantity: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    Summary: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
     Created: {
       type: DataTypes.DATE,
+      allowNull: true
+    },
+    NetPayment: {
+      type: DataTypes.TEXT,
       allowNull: true
     }
 

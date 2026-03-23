@@ -8,11 +8,11 @@ const httpTrigger: AzureFunction = async function (
   try {
     console.log("finance note data updating");
     const { documentType, row } = req.body;
-
-    console.log(documentType,row)
+    console.log("documentType", documentType)
+    console.log("updating finance note data from here", row)
 
     const result = await expenditureService.putNoteData(documentType, row);
-    
+
     // Return success response
     context.res = {
       status: 200,
@@ -27,9 +27,9 @@ const httpTrigger: AzureFunction = async function (
     // Handle errors and return response
     context.res = {
       status: 500,
-      body: { 
-        success: false, 
-        message: `Error retrieving note data: ${error.message}` 
+      body: {
+        success: false,
+        message: `Error retrieving note data: ${error.message}`
       },
     };
   }
