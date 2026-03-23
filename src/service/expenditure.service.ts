@@ -494,8 +494,12 @@ export const expenditureService = {
           Created: null,
         });
 
-        console.log("Finance note created successfully")
-        return row;
+        const updatedNote = await expenditureService.getNoteData(noteType, row.SNo);
+        if (updatedNote.success && updatedNote.data) {
+          console.log(`${noteType} data updated successfully for SNo ${row.SNo}, returning existing row`);
+          return updatedNote;
+        }
+        return { data: row }
       } else if (noteType === 'RejectionNote') {
         console.log("return note generation")
 
