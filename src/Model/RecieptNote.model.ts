@@ -83,6 +83,10 @@ export const ReceiptNote = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    Consignee: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     InvoiceNo: {
       type: DataTypes.TEXT,
       allowNull: true,

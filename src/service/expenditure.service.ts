@@ -338,9 +338,14 @@ export const expenditureService = {
     }
   },
 
-  putNoteData: async (documentType: string, row: any) => {
+  putNoteData: async (noteType: string, row: any) => {
     try {
-      if (documentType === 'FinanceNote') {
+      const existingNote = await expenditureService.getNoteData(noteType, row.SNo);
+      if (existingNote.success && existingNote.data) {
+        console.log(`${noteType} already exists for SNo ${row.SNo}, returning existing row`);
+        return existingNote;
+      }
+      if (noteType === 'FinanceNote') {
         console.log("Finance Note data insertion", row)
         const { SNo, sd } = row;
         // console.log("these", SNo, co6No, ld, sd, otherDeductions, netPayment)
@@ -394,7 +399,7 @@ export const expenditureService = {
 
         const DueDateOfDelivery = recieptdata.DueDateOfDelivery;
         const ActualDateOfSupply = recieptdata.ActualDateOfSupply;
-        const dateofacceptance = recieptdata.DateofAcceptance;
+        // const dateofacceptance = recieptdata.DateofAcceptance;
 
         const Basic = recieptdata.Rate * recieptdata.QtyReceived;
         console.log("Basic in finance note generation", Basic)
@@ -414,8 +419,7 @@ export const expenditureService = {
 
 
 
-        const IncomeTax = Basic / 1000;
-        console.log("IncomeTax in finance note generation", IncomeTax)
+
 
 
         const gst = (18 * Basic) / 100;
@@ -423,6 +427,9 @@ export const expenditureService = {
         const Gross = Basic + gst;
         console.log("Gross in finance note generation", Gross)
 
+
+        const IncomeTax = Gross / 1000;
+        console.log("IncomeTax in finance note generation", IncomeTax)
         // if(gstInvoiceData.)
         const TDS = 2 * Basic / 100;
         console.log("TDS in finance note generation", TDS)
@@ -434,51 +441,62 @@ export const expenditureService = {
         Finance Note for S.No. ${SNo}
         `
 
-        console.log("Finance note data", {
+        const dataToInsert = {
           SNo: SNo || null,
           Basic: Basic || null,
           Ld: String(Ld) || null,
-          Sd: sd || null,
+          Sd: String(sd) || null,
           IncomeTax: IncomeTax || null,
           Gross: Gross || null,
           TDS: TDS || null,
           Rate: recieptdata.Rate || null,
           Quantity: recieptdata.QtyReceived || null,
           Summary: Summary || null,
+          NetPayment: NetPayment || null,
+          Consignee: recieptdata.Consignee || null,
+          Supplier: recieptdata.SupplierName || null,
+          Created: null,
+        }
 
+        console.log("Finance note data", {
+          SNo: dataToInsert.SNo || null,
+          Basic: dataToInsert.Basic || null,
+          Ld: String(dataToInsert.Ld) || null,
+          Sd: dataToInsert.Sd || null,
+          IncomeTax: dataToInsert.IncomeTax || null,
+          Gross: dataToInsert.Gross || null,
+          TDS: dataToInsert.TDS || null,
+          Rate: dataToInsert.Rate || null,
+          Quantity: dataToInsert.Quantity || null,
+          Summary: dataToInsert.Summary || null,
+          NetPayment: dataToInsert.NetPayment || null,
+          Consignee: dataToInsert.Consignee || null,
+          Supplier: dataToInsert.Supplier || null,
           Created: null,
         })
 
 
+
         await FinanceNote.create({
-          SNo: SNo || null,
-          Basic: String(Basic) || null,
-          Ld: String(Ld) || null,
-          Sd: String(sd) || null,
-          IncomeTax: String(IncomeTax) || null,
-          Gross: String(Gross) || null,
-          TDS: String(TDS) || null,
-          Rate: String(recieptdata.Rate) || null,
-          Quantity: String(recieptdata.QtyReceived) || null,
-          Summary: String(Summary) || null,
-          NetPayment: String(NetPayment) || null,
+          SNo: dataToInsert.SNo || null,
+          Basic: String(dataToInsert.Basic) || null,
+          Ld: String(dataToInsert.Ld) || null,
+          Sd: String(dataToInsert.Sd) || null,
+          IncomeTax: String(dataToInsert.IncomeTax) || null,
+          Gross: String(dataToInsert.Gross) || null,
+          TDS: String(dataToInsert.TDS) || null,
+          Rate: String(dataToInsert.Rate) || null,
+          Quantity: String(dataToInsert.Quantity) || null,
+          Summary: String(dataToInsert.Summary) || null,
+          NetPayment: String(dataToInsert.NetPayment) || null,
+          Consignee: String(dataToInsert.Consignee) || null,
+          Supplier: String(dataToInsert.Supplier) || null,
           Created: null,
         });
 
-
-
-        // await FinanceNote.create({
-        //   SNo: SNo || null,
-        //   CO6No: co6No || null,
-        //   Ld: String(Ld) || null,
-        //   Sd: sd || null,
-        //   Otherdedunctions: otherDeductions || null,
-        //   NetPayment: netPayment || null,
-        //   Created: null,
-        // });
         console.log("Finance note created successfully")
-        return { success: true, message: 'FinanceNote inserted successfully' };
-      } else if (documentType === 'RejectionNote') {
+        return row;
+      } else if (noteType === 'RejectionNote') {
         console.log("return note generation")
 
         const { SNo, MA, GSTR2A, CopyTaxIC, Refund, InvoiceCO6 } = row;
@@ -563,6 +581,7 @@ export async function putfiledatatodb(data: any, documentType: any, rowId: numbe
       InspectionAgency: data["Inspection agency"],
       ICNo: data["IC no."],
       Dated: data.dated,
+      Consignee: data.Consignee,
       InvoiceNo: data["Challan/invoice no."],
       QtyInvoiced: data["Qty. Invoiced"],
       QtyReceived: data["Qty. Received"],

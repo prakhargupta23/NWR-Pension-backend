@@ -54,6 +54,14 @@ export const FinanceNote = sequelize.define(
     NetPayment: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    Consignee: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    Supplier: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
 
   },

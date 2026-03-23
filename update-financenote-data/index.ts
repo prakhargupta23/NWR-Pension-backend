@@ -6,12 +6,12 @@ const httpTrigger: AzureFunction = async function (
   req: HttpRequest
 ): Promise<void> {
   try {
-    console.log("finance note data updating");
-    const { documentType, row } = req.body;
-    console.log("documentType", documentType)
+    console.log("finance note data updating1");
+    const { noteType, row } = req.body;
+    console.log("noteType", noteType)
     console.log("updating finance note data from here", row)
 
-    const result = await expenditureService.putNoteData(documentType, row);
+    const result = await expenditureService.putNoteData(noteType, row);
 
     // Return success response
     context.res = {
