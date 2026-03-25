@@ -408,10 +408,12 @@ export const expenditureService = {
         console.log("daysdiff in finance note generation", daysdiff, typeof (daysdiff))
         const value = Number(recieptdata.Value);
         console.log("type of", recieptdata.Value, typeof (value))
-        const power = (daysdiff / 7);
-
+        const power = Math.ceil(daysdiff / 7);
+        console.log("power in finance note generation", power)
         const multiplier = Math.min(0.5 * power, 10);
+        console.log("multiplier in finance note generation", multiplier)
         let Ld = (multiplier * value) / 100;
+        console.log("Ld in finance note generation", Ld)
         if (daysdiff <= 0) {
           Ld = 0;
         }
